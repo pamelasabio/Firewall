@@ -11,17 +11,25 @@ iptables -A INPUT -i $interface -p tcp --sport 22 -m state --state ESTABLISHED -
 
 echo Setting SSH OUTPUT..
 
-#Allow new and established output SSH connection
+#Allow NEW,ESTABLISHED output SSH connection
 iptables -A OUTPUT -o $interface -p tcp --sport 22 -m state --state NEW,ESTABLISHED -j ACCEPT 
 
 echo Setting HTTP/S OUTPUT
-#Allow new,established and related http and https output connections
+#Allow NEW,ESTABLISHED,RELATED http and https output connections
 iptables -A OUTPUT -j ACCEPT -m state --state NEW,ESTABLISHED,RELATED -o $interface -p tcp -m multiport --dports 80,443
 
 echo Setting HTTP/S INPUT
-#Allow established,related http and https input connections
+#Allow ESTABLISHED,RELATED http and https input connections
 iptables -A INPUT -j ACCEPT -m state --state ESTABLISHED,RELATED -i $interface -p tcp -m multiport --sports 80,443
 
+echo Setting UDP/TCP OUTPUT
+#Allow NEW udp/tcp output connections
+iptables -A OUTPUT -m state --state NEW -p udp --dport 53 -j ACCEPT
+iptables -A OUTPUT -m state --state NEW -p tcp --dport 53 -j ACCEPT
+
+#Allow ESTABLISHED udp/tcp input connections
+iptables -A INPUT -m state --state ESTABLISHED -p udp --sport 53 -j ACCEPT
+iptables -A INPUT -m state --state ESTABLISHED -p tcp --sport 53 -j ACCEPT
 echo Done
 echo 
 echo New Rules:
