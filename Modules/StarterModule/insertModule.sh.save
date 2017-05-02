@@ -1,8 +1,0 @@
-make -C /lib/modules/3.5.0-19-generic/build M=/home/lakshmanan/a modules
-make[1]: Entering directory `/usr/src/linux-headers-3.5.0-19-generic'
-  CC [M]  /home/lakshmanan/a/hello.o
-  Building modules, stage 2.
-  MODPOST 1 modules
-  CC      /home/lakshmanan/a/hello.mod.o
-  LD [M]  /home/lakshmanan/a/hello.ko
-make[1]: Leaving directory `/usr/src/linux-headers-3.5.0-19-generic'
