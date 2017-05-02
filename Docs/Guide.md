@@ -11,6 +11,9 @@
   * <a href="#flush">Flush</a>
 * <a href="#kernelid">Kernel</a>
   * <a href="#kernelUtitiliesid">Commands</a>
+* <a href="#netfilter">Netfilter</a>
+  * <a href="#nfhooks">Netfilter Hooks</a>
+  * <a href="#nfmodules">Netfilter Modules</a>
 * <a href="#resources">Resources</a>
   
 
@@ -157,6 +160,37 @@ Removes module from the kernel
 ```cmd
 rmmod fjes.ko
 ```
+
+<a id="#netfilter"></a>
+## Netfilter
+
+<a id="#nfhooks"></a>
+### Netfilter hooks
+
+1. NF_IP_PRE_ROUTING - where packets come in: having passed the simple sanity checks (i.e., not truncated, IP checksum OK, not a promiscuous receive)
+
+2. NF_IP_LOCAL_IN - the routing code, which decides whether the packet is destined for another interface, or a local process. The routing code may drop packets that are unroutable.
+
+3. NF_IP_FORWARD - called when packed is destined to pass to another interface instead.
+
+4. NF_IP_POST_ROUTING - The final netfilter hook where the packet passes before being put on the wire again.
+
+5. NF_IP_LOCAL_OUT - called for packets that are created locally. Here you can see that routing occurs after this hook is called: in fact, the routing code is called first (to figure out the source IP address and some IP options): if you want to alter the routing, you must alter the 'skb->dst' field yourself, as is done in the NAT code.
+
+<a id="#nfmodules"></a>
+### Netfilter modules
+
+Kernel modules can register to listen at any of these hooks. A module that registers a function must specify the priority of the function within the hook; then when that netfilter hook is called from the core networking code, each module registered at that point is called in the order of priorites, and is free to manipulate the packet. The module can then tell netfilter to do one of five things:
+
+  1. NF_ACCEPT: continue traversal as normal.
+
+  2. NF_DROP: drop the packet; don't continue traversal.
+
+  3. NF_STOLEN: I've taken over the packet; don't continue traversal.
+
+  4. NF_QUEUE: queue the packet (usually for userspace handling).
+
+  5. NF_REPEAT: call this hook again.
 
 <a id ="#resources"></a>
 ## Resources
