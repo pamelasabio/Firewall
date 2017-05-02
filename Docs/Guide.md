@@ -9,8 +9,8 @@
   * <a href="#drop">Drop</a>
   * <a href="#save">Save</a>
   * <a href="#flush">Flush</a>
-* <a href="#kernel">Kernel</a>
-  * <a href="#kernelUtitilies">Commands</a>
+* <a href="#kernelid">Kernel</a>
+  * <a href="#kernelUtitiliesid">Commands</a>
 * <a href="#resources">Resources</a>
   
 
@@ -106,12 +106,10 @@ To clear the current rules, flush command can be used.
 iptables -F
 ```
 
-<a id ="#kernel"></a>
-
+<a id ="#kernelid"></a>
 ## Kernel Module
 
-<a id = "#kernelUtitilies"> </a>
-
+<a id = "#kernelUtitiliesid"> </a>
 ### Utilities to Manipulate Kernel Modules
 
 #### lsmod
