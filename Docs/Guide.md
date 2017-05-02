@@ -9,6 +9,8 @@
   * <a href="#drop">Drop</a>
   * <a href="#save">Save</a>
   * <a href="#flush">Flush</a>
+* <a href="#kernel">Kernel</a>
+  * <a href="#kernelUtitilies">Commands</a>
 * <a href="#resources">Resources</a>
   
 
@@ -104,6 +106,59 @@ To clear the current rules, flush command can be used.
 iptables -F
 ```
 
+<a id ="#kernel"></a>
+
+## Kernel Module
+
+<a id = "#kernelUtitilies"> </a>
+
+### Utilities to Manipulate Kernel Modules
+
+#### lsmod
+Lsmod will show currentely loaded modules into the kernel.
+
+```cmd
+# lsmod
+Module                  Size  Used by
+dm_crypt               24803  1 
+hid_generic            16545  0
+usb_hid                24265  1 
+..
+```
+
+#### insmod
+Insmod inserts new module into the Kernel Modules.
+
+```cmd
+# insmod /lib/modules/3.5.0-19-generic/kernel/fs/squashfs/squashfs.ko
+
+# lsmod | grep "squash"
+squashfs               24214  1
+```
+
+#### modinfo
+Modinfo will display information about the module.
+
+```cmd
+# modinfo /lib/modules/3.5.0-19-generic/kernel/drivers/net/fjes/fjes.ko
+
+filename:       /lib/modules/3.5.0-19-generic/kernel/drivers/net/fjes/fjes.ko
+version:        1.1
+license:        GPL
+author:         Taku Izumi
+description:    Socket Network Device Driver
+srcversion:     3411C5E01C7BDA50105EEE7
+depends:        
+intree:         Y
+vermagic:       3.5.0-19-generic SMP mod_unload modversions 686
+```
+
+#### rmmod
+Removes module from the kernel
+
+```cmd
+rmmod fjes.ko
+```
 
 <a id ="#resources"></a>
 ## Resources
