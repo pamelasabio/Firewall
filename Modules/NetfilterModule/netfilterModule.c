@@ -1,13 +1,14 @@
 #define PROTOCOL_TCP 6
 #define PROTOCOL_UDP 17
+#include <linux/ip.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/netdevice.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
-#include <linux/ip.h>
-#include <linux/tcp.h>
 #include <linux/skbuff.h>
+#include <linux/tcp.h>
+#include <linux/udp.h>
 
 MODULE_LICENSE("GPL");				// Set the license
 MODULE_AUTHOR("Eryk Szlachetka, Pamela Sabio"); // Set the Authors
@@ -43,11 +44,9 @@ unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_sta
 
 	if (ip_header->protocol == PROTOCOL_UDP){
 		printk(KERN_INFO "UDP Packet\n");
-		//udp_header = (struct udphdr *)(skb_transport_header(skb) + 20);
-		//printk(KERN_INFO "SOURCE PORT %u\n",udp_header->source);
-		// or
-		udp_header = (struct udphdr *)(sk_buffer->data + (ip_header->ihl *4));
-		//printk(KERN_INFO "SOURCE 2 PORT %u\n",udp_header->source);
+		udp_header = (struct udphdr *)(skb_transport_header(skb) + 20);
+		//udp_header = (struct udphdr *)(sk_buffer->data + (ip_header->ihl *4));
+		printk(KERN_INFO "SOURCE 2 PORT %u\n",udp_header->source);
 		if((udp_header->dest) == *(unsigned short*)telnet_port){ return NF_DROP;}
 	}else if (ip_header->protocol == PROTOCOL_TCP) // Check if it is TCP protocol
 	{
