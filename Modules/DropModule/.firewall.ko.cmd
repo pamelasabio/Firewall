@@ -1,0 +1,1 @@
+cmd_/home/pamelalouisse/Desktop/Security/Modules/DropModule/firewall.ko := ld -r -m elf_i386 -T ./scripts/module-common.lds --build-id  -o /home/pamelalouisse/Desktop/Security/Modules/DropModule/firewall.ko /home/pamelalouisse/Desktop/Security/Modules/DropModule/firewall.o /home/pamelalouisse/Desktop/Security/Modules/DropModule/firewall.mod.o
