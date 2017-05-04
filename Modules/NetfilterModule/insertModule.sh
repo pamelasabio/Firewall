@@ -6,6 +6,6 @@ insmod netfilterModule.ko
 dmesg | tail -1
 
 # Removes the module from the kernel
-rmmod netfilterModule.ko
+# rmmod netfilterModule.ko
 # Will display exit function
-dmesg | tail -1
+# dmesg | tail -1

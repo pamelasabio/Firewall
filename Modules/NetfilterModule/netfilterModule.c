@@ -1,17 +1,18 @@
-//#include <linux/kernel.h>
-//#include <linux/module.h>
-//#include <linux/netfilter.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
 
 static struct nf_hook_ops nfho;  //struct holding set of hook function options
 
-//function to be called by hook
-// typedef unsigned int nf_hookfn(unsigned int hooknum, (...));
-// typedef unsigned int nf_hookfn(const struct nf_hook_ops *ops, (...));
-//unsigned int nf_hookfn(nf_hookfn *hook, struct net_device *dev, void *priv, u_int8_t pf, unsigned int hooknum, int priority)
-// unsigned int hook_func(unsigned int hooknum, struct sk_buff *skb, const struct net_device *in, const struct net_device *out, int (*okfn)(struct sk_buff *))
+MODULE_LICENSE("GPL"); // Set the module license 
+MODULE_AUTHOR("Eryk Szlachetka, Pamela Sabio"); // Set the module authors
+MODULE_DESCRIPTION("Desc goes here.");
+
+
+// Hook function that is assigned to nfho.hook
 unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
   struct iphdr *ip_header = (struct iphdr *)skb_network_header(skb); //you can access to IP source and dest - ip_header->saddr, ip_header->daddr
