@@ -1,16 +1,25 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/netdevice.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
+#include <linux/skbuff.h>
 
-static struct nf_hook_ops nfho;  //struct holding set of hook function options
+MODULE_LICENSE("GPL");				// Set the license
+MODULE_AUTHOR("Eryk Szlachetka, Pamela Sabio"); // Set the Authors
+MODULE_DESCRIPTION("Desc goes here");		// Set the description
 
-MODULE_LICENSE("GPL"); // Set the module license 
-MODULE_AUTHOR("Eryk Szlachetka, Pamela Sabio"); // Set the module authors
-MODULE_DESCRIPTION("Desc goes here.");
-
+static struct nf_hook_ops nfho;		       // Struct holding set of hook function options
+static unsigned char *ip = "\xC0\xA8\x00\x01"; // Ip in network byte order (192.168.0.1);
+static char *interface = "lo";                 // Loop-back interface which will be blocked
+unsigned char *telnet_port = "x00\x17";	       // The telnet port
+struct sk_buff *socket_buff;		       // Socket kernel buff 
+struct udphdr *udp_header;		       // Struct for UDP header
+struct tcphdr *tcp_header;		       // Struct for TCP header
+struct httphdr *http_header;		       // Struct for HTTP header
+struct smtphdr *smtp_header;		       // Struct for SMTP header
 
 // Hook function that is assigned to nfho.hook
 unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
@@ -21,7 +30,8 @@ unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_sta
   {
     printk(KERN_INFO "TCP Packet\n");
     tcp_header = (struct tcphdr *)(skb_transport_header(skb)+20); //Note: +20 is only for incoming packets
-    printk(KERN_INFO "Source Port: %u\n", tcp_header->source); //can access dest in the same way
+    printk(KERN_INFO "Source Port: %u\n", tcp_header->source);
+    printk(KERN_INFO "Dest Port: %u\n", tcp_header->dest);
   }
   
   return NF_ACCEPT;                                                                   //accept the packet
