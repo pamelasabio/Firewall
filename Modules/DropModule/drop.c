@@ -11,7 +11,7 @@ static struct nf_hook_ops netfilter_ops_in; // NF_IP_PRE_ROUTING
 static struct nf_hook_ops netfilter_ops_out; // NF_IP_POST_ROUTING 
 
 // Function prototype in <linux/netfilter> 
-unsigned int main_hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
+unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
 	return NF_DROP; //Drop ALL Packets
 }
