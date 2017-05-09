@@ -1,26 +1,31 @@
 #!/bin/bash
 #Script to set up ip tables rules.
-#Eryk Szlachetka 18/04/17
+#Eryk Szlachetka & Caoimhe Harvey 18/04/17
 
-interface=$1
+interface = $1
 echo Interface: $interface. 
-echo Setting SSH INPUT..
 
+echo Setting SSH INPUT..
 #Allow established input SSH connection
-iptables -A INPUT -i $interface -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT
+#iptables -A INPUT -i $interface -p tcp --dport 22 -m state --state ESTABLISHED -j ACCEPT
+iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+
 
 echo Setting SSH OUTPUT..
-
 #Allow NEW,ESTABLISHED output SSH connection
-iptables -A OUTPUT -o $interface -p tcp --sport 22 -m state --state NEW,ESTABLISHED -j ACCEPT 
+#iptables -A OUTPUT -o $interface -p tcp --sport 22 -m state --state NEW,ESTABLISHED -j ACCEPT 
+iptables -A OUTPUT -p tcp --sport 22 -m conntrack --ctstate ESTABLISHED -j ACCEPT
 
-echo Setting HTTP/S OUTPUT
-#Allow NEW,ESTABLISHED,RELATED http and https output connections
-iptables -A OUTPUT -j ACCEPT -m state --state NEW,ESTABLISHED,RELATED -o $interface -p tcp -m multiport --dports 80,443
 
 echo Setting HTTP/S INPUT
+#Allow NEW,ESTABLISHED,RELATED http and https output connections
+#iptables -A OUTPUT -j ACCEPT -m state --state NEW,ESTABLISHED,RELATED -o $interface -p tcp -m multiport --dports 80,443
+iptables -A INPUT -p tcp --dport 80 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+
+echo Setting HTTP/S OUTPUT
 #Allow ESTABLISHED,RELATED http and https input connections
-iptables -A INPUT -j ACCEPT -m state --state ESTABLISHED,RELATED -i $interface -p tcp -m multiport --sports 80,443
+#iptables -A INPUT -j ACCEPT -m state --state ESTABLISHED,RELATED -i $interface -p tcp -m multiport --sports 80,443
+iptables -A OUTPUT -p tcp --sport 80 -m conntrack --ctstate ESTABLISHED -j ACCEPT
 
 echo Setting UDP/TCP OUTPUT
 #Allow NEW udp/tcp output connections
