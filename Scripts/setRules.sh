@@ -4,7 +4,6 @@
 
 echo Setting SSH INPUT..
 #Allow established input SSH connection
-#iptables -A INPUT -i $interface -p tcp --dport 22 -m state --state ESTABLISHED -j ACCEPT
 iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
 
 
@@ -22,21 +21,21 @@ echo Setting HTTP/S OUTPUT..
 iptables -A OUTPUT -p tcp --sport 80 -m conntrack --ctstate ESTABLISHED -j ACCEPT
 iptables -A OUTPUT -p tcp --sport 443 -m conntrack --ctstate ESTABLISHED -j ACCEPT
 
-echo Setting UDP/TCP OUTPUT
+echo Setting UDP/TCP OUTPUT..
 #Allow NEW udp/tcp output connections
 iptables -A OUTPUT -m state --state NEW -p udp --dport 53 -j ACCEPT
 iptables -A OUTPUT -m state --state NEW -p tcp --dport 53 -j ACCEPT
 
-echo Setting UDP/TCP INPUT
+echo Setting UDP/TCP INPUT..
 #Allow ESTABLISHED udp/tcp input connections
 iptables -A INPUT -m state --state ESTABLISHED -p udp --sport 53 -j ACCEPT
 iptables -A INPUT -m state --state ESTABLISHED -p tcp --sport 53 -j ACCEPT
 
-echo Setting SMTP INPUT
+echo Setting SMTP INPUT..
 #Allow SMTP connections INPUT
 iptables -A INPUT -p tcp --dport 25 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
 
-echo Setting SMTP OUTPUT
+echo Setting SMTP OUTPUT..
 #Allow SMTP connection OUTPUT
 iptables -A OUTPUT -p tcp --sport 25 -m conntrack --ctstate ESTABLISHED -j ACCEPT
 
