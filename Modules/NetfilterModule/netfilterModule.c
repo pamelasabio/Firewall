@@ -41,7 +41,8 @@ struct mf_rule {
 	struct list_head list;
 };
 
-static struct nf_hook_ops nfho, nfho_out;       // Struct holding set of hook function options
+static struct mf_rule policy_list;
+static struct nf_hook_ops nfho_in, nfho_out;   // Struct holding set of hook function options
 static unsigned char *ip = "\xC0\xA8\x00\x01"; // Ip in network byte order (192.168.0.1);
 static char *interface = "lo";                 // Loop-back interface which will be blocked
 unsigned char *telnet_port = "x00\x17";	       // The telnet port
@@ -51,6 +52,68 @@ struct iphdr *ip_header, *ip_header_out;
 struct tcphdr *tcp_header, *tcp_header_out;
 //struct httphdr *http_header_in, *http_header_out;
 //struct smpthdr *smtp_header_in, *smtp_header_out;
+
+
+unsigned int port_str_to_int(char *port_str) {
+	unsigned int port = 0;
+	int i = 0;
+
+	if (port_str==NULL) {
+		return 0;
+	}
+
+	while (port_str[i]!=' ') {
+		port = port*10 + (port_str[i]-'0');
+		++i;
+	}
+
+	return port;
+}
+
+unsigned int ip_str_to_hl(char *ip_str) {
+
+	/* Convert the STRING to BYTE ARRAY first, e.g.: from "122.111.195.3" to [122][111][195][3]*/
+	unsigned char ip_array[4];
+	int i = 0;
+	unsigned int ip = 0;
+
+	if (ip_str==NULL) {
+		return 0; 
+	}
+
+	memset(ip_array, 0, 4);
+
+	while (ip_str[i]!='.') {
+		ip_array[0] = ip_array[0]*10 + (ip_str[i++]-'0');
+	}
+
+	++i;
+
+	while (ip_str[i]!='.') {
+		ip_array[1] = ip_array[1]*10 + (ip_str[i++]-'0');
+	}
+
+	++i;
+
+	while (ip_str[i]!='.') {
+		ip_array[2] = ip_array[2]*10 + (ip_str[i++]-'0');
+	}
+
+	++i;
+
+	while (ip_str[i]!=' ') {
+		ip_array[3] = ip_array[3]*10 + (ip_str[i++]-'0');
+	}
+
+	/* Convert from BYTE ARRAY to HOST LONG INT format */
+	ip = (ip_array[0] << 24);
+	ip = (ip | (ip_array[1] << 16));
+	ip = (ip | (ip_array[2] << 8));
+	ip = (ip | ip_array[3]);
+	return ip;
+
+}
+
 
 // Hook function for incoming packets.
 unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
