@@ -117,48 +117,41 @@ unsigned int ip_str_to_hl(char *ip_str) {
 
 // Hook function for incoming packets.
 unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
-{
-	/*
+{	
+	unsigned int source_ip;
+	unsigned int destination_ip;
+	unsigned int source_port, destination_port = 0;
+
 	// Check if we are dealing with loop-back interface is so then drop it.
   	if(strcmp(state->in->name,interface) == 0){
 		return NF_DROP;
   	}
-	sk_buffer_in = skb;
-
-	if(!(sk_buffer_in)) { return NF_ACCEPT; } // Validate socket_buff
-	ip_header = (struct iphdr *)skb_network_header(sk_buffer_in); // Assign the ip_header
+	
+	if(!(skb)) { return NF_ACCEPT; } // Validate socket_buff
+	ip_header= (struct iphdr *)skb_network_header(skb); // Assign the ip_header
 	if(!(ip_header)){return NF_ACCEPT;} // Validate IP Packet
 	if(ip_header->saddr == *(unsigned int *)ip){return NF_DROP;} // Compare IP  
 
+	//Initialize variables
+	source_ip = (unsigned int)ip_header->saddr;
+	destination_ip = (unsigned int)ip_header->daddr;
+
 	if (ip_header->protocol == PROTOCOL_UDP){
 		printk(KERN_INFO "UDP Packet\n");
-		udp_header = (struct udphdr *)(skb_transport_header(skb) + 20);
-		//udp_header = (struct udphdr *)(sk_buffer->data + (ip_header->ihl *4));
-		printk(KERN_INFO "Source: %u\nDest: %u\n",udp_header->source,udp_header->dest);
+		udp_header = (struct udphdr *)(skb_transport_header(skb) + 20); // Assign header
+		// Drop - if telnet
 		if((udp_header->dest) == *(unsigned short*)telnet_port){ return NF_DROP;}
-		return NF_ACCEPT;
+		// Assign ports
+		source_port = (unsigned int)ntohs(udp_header->source);
+		destination_port = (unsigned int)ntohs(udp_header->dest);
 	}else if (ip_header->protocol == PROTOCOL_TCP) // Check if it is TCP protocol
 	{
 		printk(KERN_INFO "TCP Packet\n");
-		tcp_header = (struct tcphdr *)(skb_transport_header(skb)+20); //Note: +20 is only for incoming packets
-		printk(KERN_INFO "Source: %u\nDest: %u\n", tcp_header->source,tcp_header->dest);
-		/*if(tcp_header->dest == PROTOCOL_SMTP){
-			// SMTP
-			printk(KERN_INFO "SMTP end-3"); 
-		}else if(tcp_header->dest == PROTOCOL_HTTPS){
-			// HTTP
-			printk(KERN_INFO "Returning accept end-3");
-			return NF_ACCEPT;
-		} HERE 
-		printk(KERN_INFO "Returning accept end-2");
-		return NF_ACCEPT;
-	}else{
-		printk(KERN_INFO "Returning drop end-1");
-  		return NF_DROP;
+		tcp_header = (struct tcphdr *)(skb_transport_header(skb)+20); // Assign header
+		// Assign ports
+		source_port = (unsigned int)ntohs(tcp_header->source);
+		destination_port = (unsigned int)ntohs(tcp_header->dest);
 	}
-
-	printk(KERN_INFO "Returning accept end");
-	*/
 	return NF_ACCEPT;
 
 }
@@ -175,11 +168,11 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 		return NF_DROP;
 	}
 	
-	if(!(sk_buffer_out)) { return NF_ACCEPT; } // Validate socket_buff
+	if(!(skb)) { return NF_ACCEPT; } // Validate socket_buff
         ip_header_out = (struct iphdr *)skb_network_header(skb); // Assign$
         if(!(ip_header_out)){return NF_ACCEPT;} // Validate IP Packet
         if(ip_header_out->saddr == *(unsigned int *)ip){return NF_DROP;} // Compare$
-
+	// Initialize ips
 	destination_ip = (unsigned int) ip_header_out -> daddr;
 	source_ip = (unsigned int) ip_header_out -> saddr;
 
