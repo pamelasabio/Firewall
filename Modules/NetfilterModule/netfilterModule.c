@@ -165,39 +165,61 @@ unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_
 
 // Hook for outgoing packets.
 unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){
- // TODO Hook function for outgoing packets
-	/*if(strcmp(state->in->name, interface) == 0){
+	if(strcmp(state->in->name, interface) == 0){
 		return NF_DROP;
 	}
-
-	sk_buffer_out = skb;
-
+	
 	if(!(sk_buffer_out)) { return NF_ACCEPT; } // Validate socket_buff
-        ip_header_out = (struct iphdr *)skb_network_header(sk_buffer_out); // Assign$
+        ip_header_out = (struct iphdr *)skb_network_header(skb); // Assign$
         if(!(ip_header_out)){return NF_ACCEPT;} // Validate IP Packet
         if(ip_header_out->saddr == *(unsigned int *)ip){return NF_DROP;} // Compare$
 
+
+	// Local variables for ip addresses, ports and data.
+	unsigned int destination_ip = (unsigned int) ip_header_out -> daddr;
+	unsigned int source_ip = (unsigned int) ip_header_out -> saddr;
+	unsigned int destination_port = source_port = 0;
+	unsigned int *user_data; 
+
+	printk(KERN_INFO "Outgoing packet.");
+
+	// Check if we are dealing with UDP PACKET
         if (ip_header_out->protocol == PROTOCOL_UDP){
                 printk(KERN_INFO "UDP Packet Out\n");
                 udp_header_out = (struct udphdr *)(skb_transport_header(skb) + 20);
-                //udp_header = (struct udphdr *)(sk_buffer->data + (ip_header->$
-                printk(KERN_INFO "Source: %u\nDest: %u\n",udp_header_out->source,udp_header_out->dest);
+		source_port = (unsigned int)ntohs(udp_header_out->source);
+		destination_port = (unsigned int)ntohs(udp_header_out ->dest);
+    		// DROP THE TELNET CONNECTIONS
                 if((udp_header_out->dest) == *(unsigned short*)telnet_port){ return NF_DROP;}
-                return NF_ACCEPT;
-        }else if (ip_header_out->protocol == PROTOCOL_TCP) // Check if it is TCP pr$
+        }else if (ip_header_out->protocol == PROTOCOL_TCP) // Check if we are dealing with TCP PACKET 
         {
                 printk(KERN_INFO "TCP Packet Out\n");
                 tcp_header_out = (struct tcphdr *)(skb_transport_header(skb)+20);
-                printk(KERN_INFO "Source: %u\nDest: %u\n", tcp_header_out->source,tcp_header_out->dest);
-		printk(KERN_INFO "Returning accept end-2");
-                return NF_ACCEPT;
+              	source_port = (unsigned int)ntohs(tcp_header_out->source);
+		destination_port = (unsigned int)ntohs(tcp_header_out ->dest);
+
+		// Check if we are dealing with port 80
+		if(src_port == 80){
+			printk(KERN_INFO "\n\nPORT 80!\n\n");
+		}else{
+			printk(KERN_INFO "\n\nNOT PORT 80: S: %u | D: %u \n\n", src_port, dest_port);
+		}
+
+		user_data = (unsigned char *) ((unsigned char*) tcp_header + (tcp_header->doff *4));
+		if((user_data[0] = 'H') && (user_data[1] == 'T') && (user_data[2] == 'T') && (user_data[3] == 'P')){
+			printk(KERN_INFO "\n\nHTTP DATA!\n\n");
+		}else{
+			printk(KERN_INFO "\n\nNOT HTTP! %c,%c,%c,%c \n\n", user_data[0], user_data[1], user_data[2], user_data[3]);
+		}
+
+
         }else{
                 printk(KERN_INFO "Returning drop end-1");
                 return NF_DROP;
         }
 
         printk(KERN_INFO "Returning accept end");
-        */
+        
 	return NF_ACCEPT;
 	
 }
