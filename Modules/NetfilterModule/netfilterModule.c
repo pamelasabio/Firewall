@@ -220,6 +220,15 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 }
 
 //TODO : Add a rule function ??
+void add_rule(struct mf_rule_desp * rule_desp_struct){
+	struct mf_rule* rule;
+	// TODO: Allocate memory for the rule, maybe use KMALLOC ?
+	// TODO: Do error checking for memory allocation
+	printk(KERN_INFO "Adding rule.");
+
+	// TODO: Initialize (struct) rule's variables to variables from the parameter passed
+	// TODO: After, maybe initialize a list ?
+}
 
 // Function to drop all the packets
 void drop_all_packets(void){
@@ -230,7 +239,7 @@ void drop_all_packets(void){
 	printk(KERN_INFO "Blocking incoming connections for all protocols.\n");
 	rule_block_all_incoming.in_out = 1; // 0 = neither in or out, 1 = in, 2 = out
 	rule_block_all_incoming.src_ip = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_block_all_incoming.src_ip, "10.0.2.15"); // CHANGE THE IP
+	strcpy(rule_block_all_incoming.src_ip, "10.0.2.15"); // TODO: CHANGE THE IP
 	rule_block_all_incoming.src_netmask = (char *)kmalloc(16, GFP_KERNEL);
 	strcpy(rule_block_all_incoming.src_netmask, "255.255.255.255");
 	rule_block_all_incoming.src_port = NULL;
@@ -239,12 +248,12 @@ void drop_all_packets(void){
 	rule_block_all_incoming.dest_port = NULL;
 	rule_block_all_incoming.proto = 0;  // ALL PROTOCOLS
 	rule_block_all_incoming.action = 0; // BLOCK ACTION (DROP)
-	// TODO: Call function to add the rules
+	add_rule(&rule_block_all_incoming);
 
 	printk(KERN_INFO "Blocking outgoing connections for all protocols.\n");
 	rule_block_all_outgoing.in_out = 2; // 0 = neither in or out, 1 = in, 2 = out
 	rule_block_all_outgoing.src_ip = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_block_all_outgoing.src_ip, "10.0.2.pri15"); // CHANGE THE IP
+	strcpy(rule_block_all_outgoing.src_ip, "10.0.2.15"); // TODO: CHANGE THE IP
 	rule_block_all_outgoing.src_netmask = (char *)kmalloc(16, GFP_KERNEL);
 	strcpy(rule_block_all_outgoing.src_netmask, "255.255.255.255");
 	rule_block_all_outgoing.src_port = NULL;
@@ -253,6 +262,7 @@ void drop_all_packets(void){
 	rule_block_all_outgoing.dest_port = NULL;
 	rule_block_all_outgoing.proto = 0;  // 0 all, 1 tcp, 2 udp
 	rule_block_all_outgoing.action = 0; // 0 for block, 1 for unblock
+	add_rule(&rule_block_all_incoming);
 	
 }
 
@@ -277,4 +287,5 @@ void cleanup_module()
 {
   	nf_unregister_hook(&nfho_in);		//cleanup – unregister hook (IN)
 	nf_unregister_hook(&nfho_out);		// cleanup - unregister hook (OUT)
+	//drop_all_packets();			// Drop all the incoming and outgoing packets.
 }
