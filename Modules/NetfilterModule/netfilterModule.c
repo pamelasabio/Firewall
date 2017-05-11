@@ -165,6 +165,12 @@ unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_
 
 // Hook for outgoing packets.
 unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){
+	// Local variables for ip addresses, ports and data.
+	unsigned int destination_ip;
+	unsigned int source_ip;
+	unsigned int destination_port, source_port = 0;
+	unsigned char *user_data; 	
+
 	if(strcmp(state->in->name, interface) == 0){
 		return NF_DROP;
 	}
@@ -174,12 +180,8 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
         if(!(ip_header_out)){return NF_ACCEPT;} // Validate IP Packet
         if(ip_header_out->saddr == *(unsigned int *)ip){return NF_DROP;} // Compare$
 
-
-	// Local variables for ip addresses, ports and data.
-	unsigned int destination_ip = (unsigned int) ip_header_out -> daddr;
-	unsigned int source_ip = (unsigned int) ip_header_out -> saddr;
-	unsigned int destination_port = source_port = 0;
-	unsigned int *user_data; 
+	destination_ip = (unsigned int) ip_header_out -> daddr;
+	source_ip = (unsigned int) ip_header_out -> saddr;
 
 	printk(KERN_INFO "Outgoing packet.");
 
@@ -199,13 +201,13 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 		destination_port = (unsigned int)ntohs(tcp_header_out ->dest);
 
 		// Check if we are dealing with port 80
-		if(src_port == 80){
+		if(source_port == 80){
 			printk(KERN_INFO "\n\nPORT 80!\n\n");
 		}else{
-			printk(KERN_INFO "\n\nNOT PORT 80: S: %u | D: %u \n\n", src_port, dest_port);
+			printk(KERN_INFO "\n\nNOT PORT 80: S: %u | D: %u \n\n", source_port, destination_port);
 		}
 
-		user_data = (unsigned char *) ((unsigned char*) tcp_header + (tcp_header->doff *4));
+		user_data = (unsigned char *) ((unsigned char*) tcp_header_out + (tcp_header_out->doff *4));
 		if((user_data[0] = 'H') && (user_data[1] == 'T') && (user_data[2] == 'T') && (user_data[3] == 'P')){
 			printk(KERN_INFO "\n\nHTTP DATA!\n\n");
 		}else{
@@ -224,27 +226,62 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 	
 }
 
+//TODO : Add a rule function ??
+
+// Function to drop all the packets
+void drop_all_packets(void){
+	struct mf_rule_desp rule_block_all_incoming;
+	struct mf_rule_desp rule_block_all_outgoing;
+	
+	printk(KERN_INFO "\n\nSetting the rules.\n\n");
+	printk(KERN_INFO "Blocking incoming connections for all protocols.\n");
+	rule_block_all_incoming.in_out = 1; // 0 = neither in or out, 1 = in, 2 = out
+	rule_block_all_incoming.src_ip = (char *)kmalloc(16, GFP_KERNEL);
+	strcpy(rule_block_all_incoming.src_ip, "10.0.2.15"); // CHANGE THE IP
+	rule_block_all_incoming.src_netmask = (char *)kmalloc(16, GFP_KERNEL);
+	strcpy(rule_block_all_incoming.src_netmask, "255.255.255.255");
+	rule_block_all_incoming.src_port = NULL;
+	rule_block_all_incoming.dest_ip = NULL;
+	rule_block_all_incoming.dest_netmask = NULL;
+	rule_block_all_incoming.dest_port = NULL;
+	rule_block_all_incoming.proto = 0;  // ALL PROTOCOLS
+	rule_block_all_incoming.action = 0; // BLOCK ACTION (DROP)
+	// TODO: Call function to add the rules
+
+	printk(KERN_INFO "Blocking outgoing connections for all protocols.\n");
+	rule_block_all_outgoing.in_out = 2; // 0 = neither in or out, 1 = in, 2 = out
+	rule_block_all_outgoing.src_ip = (char *)kmalloc(16, GFP_KERNEL);
+	strcpy(rule_block_all_outgoing.src_ip, "10.0.2.pri15"); // CHANGE THE IP
+	rule_block_all_outgoing.src_netmask = (char *)kmalloc(16, GFP_KERNEL);
+	strcpy(rule_block_all_outgoing.src_netmask, "255.255.255.255");
+	rule_block_all_outgoing.src_port = NULL;
+	rule_block_all_outgoing.dest_ip = NULL;
+	rule_block_all_outgoing.dest_netmask = NULL;
+	rule_block_all_outgoing.dest_port = NULL;
+	rule_block_all_outgoing.proto = 0;  // 0 all, 1 tcp, 2 udp
+	rule_block_all_outgoing.action = 0; // 0 for block, 1 for unblock
+	
+}
+
 //Called when module loaded using 'insmod'
 int init_module()
 {
-	nfho.hook = hook_func_in;           //function to call when conditions below met
-	nfho.hooknum = NF_INET_PRE_ROUTING; //called right after packet recieved, first hook in Netfilter
-	nfho.pf = PF_INET;                  //IPV4 packets
-	nfho.priority = NF_IP_PRI_FIRST;    //set to highest priority over all other hook functions
-
+	nfho_in.hook = hook_func_in;		//function to call when conditions below met
+	nfho_in.hooknum = NF_INET_LOCAL_IN;	//called right after packet recieved, first hook in Netfilter
+	nfho_in.pf = PF_INET;			//IPV4 packets
+	nfho_in.priority = NF_IP_PRI_FIRST;	//set to highest priority over all other hook functions
+	nf_register_hook(&nfho_in);		// Register the hook
 	nfho_out.hook = hook_func_out;
-	nfho_out.hooknum = NF_INET_POST_ROUTING;
+	nfho_out.hooknum = NF_INET_LOCAL_OUT;
 	nfho_out.pf = PF_INET;
 	nfho_out.priority = NF_IP_PRI_FIRST;
-
-	// Register hooks
-	nf_register_hook(&nfho);
 	nf_register_hook(&nfho_out);
-  return 0;                           //return 0 for success
+ 	return 0;
 }
 
 //Called when module unloaded using 'rmmod'
 void cleanup_module()
 {
-  nf_unregister_hook(&nfho);         //cleanup – unregister hook
+  	nf_unregister_hook(&nfho_in);		//cleanup – unregister hook (IN)
+	nf_unregister_hook(&nfho_out);		// cleanup - unregister hook (OUT)
 }
