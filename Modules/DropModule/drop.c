@@ -21,12 +21,12 @@ int init_module()
         netfilter_ops_in.pf                     =       PF_INET;
         netfilter_ops_in.hooknum                =       NF_INET_PRE_ROUTING;
         netfilter_ops_in.priority               =       NF_IP_PRI_FIRST;
-        netfilter_ops_out.hook                  =       hook_func;
-        netfilter_ops_out.pf                    =       PF_INET;
-        netfilter_ops_out.hooknum               =       NF_INET_POST_ROUTING;
-        netfilter_ops_out.priority              =       NF_IP_PRI_FIRST;
+        //netfilter_ops_out.hook                  =       hook_func;
+        //netfilter_ops_out.pf                    =       PF_INET;
+        //netfilter_ops_out.hooknum               =       NF_INET_POST_ROUTING;
+        //netfilter_ops_out.priority              =       NF_IP_PRI_FIRST;
         nf_register_hook(&netfilter_ops_in); // register NF_IP_PRE_ROUTING hook */
-        nf_register_hook(&netfilter_ops_out); // register NF_IP_POST_ROUTING hook */
+        //nf_register_hook(&netfilter_ops_out); // register NF_IP_POST_ROUTING hook */
 	return 0;
 }
 
