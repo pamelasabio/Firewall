@@ -219,15 +219,29 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 	
 }
 
-//TODO : Add a rule function ??
 void add_rule(struct mf_rule_desp * rule_desp_struct){
 	struct mf_rule* rule;
-	// TODO: Allocate memory for the rule, maybe use KMALLOC ?
-	// TODO: Do error checking for memory allocation
-	printk(KERN_INFO "Adding rule.");
+	rule = kmalloc(sizeof(*rule), GFP_KERNEL);
+	
+	if (rule == NULL) {
+		printk(KERN_INFO "ERROR ! MEMORY ALLOCATION FAILED !");
+		return;
+	}
 
-	// TODO: Initialize (struct) rule's variables to variables from the parameter passed
-	// TODO: After, maybe initialize a list ?
+	printk(KERN_INFO "Adding rule.");
+	rule->in_out = rule_desp_struct->in_out;
+	rule->src_ip = ip_str_to_hl(rule_desp_struct->src_ip);
+	rule->src_netmask = ip_str_to_hl(rule_desp_struct->src_netmask);
+	rule->src_port = port_str_to_int(rule_desp_struct->src_port);
+	rule->dest_ip = ip_str_to_hl(rule_desp_struct->dest_ip);
+	rule->dest_netmask = ip_str_to_hl(rule_desp_struct->dest_netmask);
+	rule->dest_port = port_str_to_int(rule_desp_struct->dest_port);
+	rule->proto = rule_desp_struct->proto;
+	rule->action = rule_desp_struct->action;
+	printk(KERN_INFO "Finished adding.\n");
+	
+	INIT_LIST_HEAD(&(rule->list));
+	list_add_tail(&(rule->list), &(policy_list.list));
 }
 
 // Function to drop all the packets
