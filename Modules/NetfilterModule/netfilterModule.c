@@ -116,8 +116,9 @@ unsigned int ip_str_to_hl(char *ip_str) {
 
 
 // Hook function for incoming packets.
-unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
-{	
+unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){	
+	struct list_head *lh;
+	struct mf_rule *rule;
 	unsigned int source_ip;
 	unsigned int destination_ip;
 	unsigned int source_port, destination_port = 0;
@@ -152,19 +153,38 @@ unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_
 		source_port = (unsigned int)ntohs(tcp_header->source);
 		destination_port = (unsigned int)ntohs(tcp_header->dest);
 	}
-	return NF_ACCEPT;
+	
+	list_for_each(lh,&policy_list){
+		i++;
+		rule = list_entry(p, struct mf_rule, list);
+		//TODO: Check if in rule, if not skip
+		//TODO: If in, compare protocols
+		// i.e. rule protocol with packet protocol
+		// e.g. (Rule) TCP == TCP (Packet)
+		// if TCP check ACTION status
+		// if status is to allow packet, then check if http/s port
+		// if http/s port, check if http/s header
+		// if http/s header - accept
+		// Consider doing the same for SMTP
+		// Drop all the rest
+		
+	}
+
+	return NF_DROP;
 
 }
 
 // Hook for outgoing packets.
 unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){
+	struct list_head *lh;
+	struct mf_rule *rule;	
 	// Local variables for ip addresses, ports and data.
 	unsigned int destination_ip;
 	unsigned int source_ip;
 	unsigned int destination_port, source_port = 0;
-	unsigned char *user_data; 	
+	unsigned char *user_data;
 
-	if(strcmp(state->in->name, interface) == 0){
+	if(strcmp(state->in->name, interfacse) == 0){
 		return NF_DROP;
 	}
 	
@@ -203,19 +223,33 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 		user_data = (unsigned char *) ((unsigned char*) tcp_header_out + (tcp_header_out->doff *4));
 		if((user_data[0] = 'H') && (user_data[1] == 'T') && (user_data[2] == 'T') && (user_data[3] == 'P')){
 			printk(KERN_INFO "\n\nHTTP DATA!\n\n");
+			return NF_ACCEPT; // Accept the packet if its HTTP
 		}else{
 			printk(KERN_INFO "\n\nNOT HTTP! %c,%c,%c,%c \n\n", user_data[0], user_data[1], user_data[2], user_data[3]);
 		}
 
 
-        }else{
-                printk(KERN_INFO "Returning drop end-1");
-                return NF_DROP;
         }
 
-        printk(KERN_INFO "Returning accept end");
+	list_for_each(lh,&policy_list){
+		i++;
+		rule = list_entry(p, struct mf_rule, list);
+		//TODO: Check if out rule, if not skip
+		//TODO: If out, compare protocols
+		// i.e. rule protocol with packet protocol
+		// e.g. (Rule) TCP == TCP (Packet)
+		// if TCP check ACTION status
+		// if status is to allow packet, then check if http/s port
+		// if http/s port, check if http/s header
+		// if http/s header - accept
+		// Consider doing the same for SMTP
+		// Drop all the rest
+		
+	}
+
+        printk(KERN_INFO "Returning drop.");
         
-	return NF_ACCEPT;
+	return NF_DROP; // If packets weren't accept so far, that means we can drop it.
 	
 }
 
