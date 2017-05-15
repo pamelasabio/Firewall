@@ -2,6 +2,8 @@
 #Script to set up ip tables rules.
 #Eryk Szlachetka & Caoimhe Harvey 18/04/17 
 
+#Change -j parameter to REJECT to block a connection
+
 echo Setting SSH INPUT..
 #Allow established input SSH connection
 iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
@@ -38,6 +40,19 @@ iptables -A INPUT -p tcp --dport 25 -m conntrack --ctstate NEW,ESTABLISHED -j AC
 echo Setting SMTP OUTPUT..
 #Allow SMTP connection OUTPUT
 iptables -A OUTPUT -p tcp --sport 25 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+
+echo Setting Forwarding..
+#setting IP Forwarding for internal network
+iptables -A FORWARD -i eth1 -j ACCEPT
+iptables -A FORWARD -o eth1 -j ACCEPT
+
+#enabling forwarding on this machine
+echo Enabling Forwarding on this machine
+sysctl net.ipv4.ip_forward=1
+
+#
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j DNAT --to-destination 10.0.2.15:80
 
 echo Done
 echo 
