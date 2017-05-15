@@ -3,7 +3,7 @@
 # Inserts module to the kernel
 insmod netfilterModule.ko
 # Will display init function
-dmesg | tail -3
+dmesg | tail -5
 
 # Removes the module from the kernel
 # rmmod netfilterModule.ko
