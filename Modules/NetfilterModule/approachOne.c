@@ -31,7 +31,7 @@ unsigned int ip_str_to_hl(char *ip_str);
 /* Firewall policy struct */
 struct mf_rule_desp {
 	unsigned char in_out;
-    	char *src_ip, *src_netmask, *source_port, *dest_ip, *dest_netmask, *destination_port;
+    	char *src_ip, *src_netmask, *src_port, *dest_ip, *dest_netmask, *dest_port;
 	unsigned char proto;
 	unsigned char action;
 };
@@ -42,11 +42,11 @@ struct mf_rule {
 	unsigned char in_out;       // 0 = Neither IN nor OUT, 1 = IN, 2 = OUT
 	unsigned int src_ip;
 	unsigned int src_netmask;
-	unsigned int source_port;
+	unsigned int src_port;
 	unsigned int dest_ip;
 
 	unsigned int dest_netmask;
-	unsigned int destination_port;
+	unsigned int dest_port;
 	unsigned char proto;        // 0 =  all, 1 = TCP, 2 = UDP
 	unsigned char action;       // 0 = BLOCK, 1 = UNBLOCK
 	struct list_head list;
@@ -57,7 +57,7 @@ static struct nf_hook_ops nfho_in;
 static struct nf_hook_ops nfho_out;
 //static struct nf_hook_ops nfho_in, nfho_out;   // Struct holding set of hook function options
 static unsigned char *ip = "\xC0\xA8\x00\x01"; // Ip in network byte order (192.168.0.1);
-//static char *interface = "lo";                 // Loop-back interface which will be blocked
+static char *interface = "lo";                 // Loop-back interface which will be blocked
 unsigned char *telnet_port = "x00\x17";	       // The telnet port
 struct udphdr *udp_header, *udp_header_out;
 struct sk_buff *sk_buffer_in, *sk_buffer_out;
@@ -135,6 +135,7 @@ unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_
 	unsigned int source_ip;
 	unsigned int destination_ip;
 	unsigned int source_port, destination_port = 0;
+	unsigned char *user_data;
 	int i = 0;
 	
 	// Check if we are dealing with loop-back interface is so then drop it.
@@ -181,35 +182,37 @@ unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_
 			continue; // Skip it
 		}else{
 			// Compare rule and the ip_header
-			if((rule -> proto == ONE) && (ip_header->protocol != PROTOCOL_TCP)){
-				continue;
-				
-			}else if(((rule -> proto == 1) && (ip_header->protocol != PROTOCOL_UDP))){
-				continue;
-			}else{
-				//check the port number
-				if (rule->source_port==0) {
-					//rule doesn't specify src port: match
-				}else if (source_port!=rule->source_port) {
-					continue;
-				}
-				if (rule->destination_port == 0) {
-					//rule doens't specify dest port: match
-				}
-				else if (destination_port!=rule->destination_port) {
-					continue;
-				}
-
-				//a match is found: take action
-				if (rule->action==0) {
-					printk(KERN_INFO "DROPPING PACKET IN!");
-					return NF_DROP;
-				} else {
-					printk(KERN_INFO "ALLOWING PACKET IN!");
+			if((rule -> proto == ONE) && (ip_header->protocol == PROTOCOL_TCP)){
+				// We are inside TCP (rule allows tcp, and the packet is tcp)
+				// Check if action == 1 (Means check if action == ALLOW)
+				if(rule -> action == 1){
+					printk(KERN_INFO "Inside action 1 (ALLOW) / IN");
+					
+					user_data = (unsigned char *) ((unsigned char*) tcp_header + (tcp_header->doff + 5));
+					if((user_data[0] = 'H') && (user_data[1] = 'T') && (user_data[2] == 'T')){
+						printk(KERN_INFO "\n\nH T DATA\n\n");
+					}else if((user_data[0] = 'H')){
+					//if((user_data[0] = 'H') && (user_data[1] == 'T') && (user_data[2] == 'T') && (user_data[3] == 'P')){
+						printk(KERN_INFO "\n\nHTTP DATA!\n\n");
+						return NF_ACCEPT; // Accept the packet if its HTTP
+					}else{
+						printk(KERN_INFO "\n\nNOT HTTP! %c,%c,%c,%c \n\n", user_data[0], user_data[1], user_data[2], user_data[3]);
+					}
+					//TODO: TESTING REMOVE 
 					return NF_ACCEPT;
+				}else{
+					printk(KERN_INFO "Outside action 1 (DROP) / IN");
 				}
+			}else if(((rule -> proto == 1) && (ip_header->protocol == PROTOCOL_UDP))){
+				printk(KERN_INFO "Allowing UDP Packet / IN");
+				return NF_ACCEPT;
+			}else{
+				continue;
 			}
 		}
+		//TODO: Consider doing the same for SMTP
+		// Drop all the rest
+
 	}
 	printk(KERN_INFO "Dropping packet %d / IN", ip_header->protocol);
 	return NF_DROP;
@@ -224,16 +227,19 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 	unsigned int destination_ip;
 	unsigned int source_ip;
 	unsigned int destination_port, source_port = 0;
+	//unsigned char *user_data;
 	int i = 0;
+	// TODO: REMOVE THIS LINE OF CODE
+	return NF_ACCEPT;
 	
 	/*if(strcmp(state->in->name, interface) == 0){
 		return NF_DROP;
-	}*/
+	}
 
-	//if(!(skb)) { return NF_DROP; } // Validate socket_buff
+	if(!(skb)) { return NF_DROP; } // Validate socket_buff
         ip_header_out = (struct iphdr *)skb_network_header(skb); // Assign$
-        //if(!(ip_header_out)){return NF_DROP;} // Validate IP Packet
-        //if(ip_header_out->saddr == *(unsigned int *)ip){return NF_DROP;} // Compare$
+        if(!(ip_header_out)){return NF_DROP;} // Validate IP Packet
+        if(ip_header_out->saddr == *(unsigned int *)ip){return NF_DROP;} // Compare$
 	// Initialize ips
 	destination_ip = (unsigned int) ip_header_out -> daddr;
 	source_ip = (unsigned int) ip_header_out -> saddr;
@@ -243,59 +249,34 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 	// Check if we are dealing with UDP PACKET
         if (ip_header_out->protocol == PROTOCOL_UDP){
                 printk(KERN_INFO "UDP Packet Out\n");
-                udp_header_out = (struct udphdr *)(skb_transport_header(skb));
+                udp_header_out = (struct udphdr *)(skb_transport_header(skb) + 20);
 		source_port = (unsigned int)ntohs(udp_header_out->source);
 		destination_port = (unsigned int)ntohs(udp_header_out ->dest);
     		// DROP THE TELNET CONNECTIONS
-                //if((udp_header_out->dest) == *(unsigned short*)telnet_port){ return NF_DROP;}
+                if((udp_header_out->dest) == *(unsigned short*)telnet_port){ return NF_DROP;}
         }else if (ip_header_out->protocol == PROTOCOL_TCP) // Check if we are dealing with TCP PACKET 
         {
                 printk(KERN_INFO "TCP Packet Out\n");
-                tcp_header_out = (struct tcphdr *)(skb_transport_header(skb));
+                tcp_header_out = (struct tcphdr *)(skb_transport_header(skb)+20);
               	source_port = (unsigned int)ntohs(tcp_header_out->source);
 		destination_port = (unsigned int)ntohs(tcp_header_out ->dest);
         }
 
 	list_for_each(lh,&policy_list.list){
-		printk(KERN_INFO "List For Each / IN");
 		i++;
 		rule = list_entry(lh, struct mf_rule, list);
-		// Check if we are not working with "in" packet
-		if(rule -> in_out != 2){
-			continue; // Skip it
-		}else{
-			// Compare rule and the ip_header
-			if((rule -> proto == ONE) && (ip_header->protocol != PROTOCOL_TCP)){
-				continue;
-				
-			}else if(((rule -> proto == 1) && (ip_header->protocol != PROTOCOL_UDP))){
-				continue;
-			}else{
-				//check the port number
-				if (rule->source_port== 0) {
-					//rule doesn't specify src port: match
-				}else if (source_port!=rule->source_port) {
-					continue;
-				}
-				if (rule->destination_port == 0) {
-					//rule doens't specify dest port: match
-				}
-				else if (destination_port != rule->destination_port) {
-					continue;
-				}
+		//TODO: Check if out rule, if not skip
+		//TODO: If out, compare protocols
+		// i.e. rule protocol with packet protocol
+		// e.g. (Rule) TCP == TCP (Packet)
+		// if TCP check ACTION status
+		// if status is to allow packet, then check if http/s port
+		// if http/s port, check if http/s header
+		// if http/s header - accept
+		// Consider doing the same for SMTP
+		// Drop all the rest
 
-				//a match is found: take action
-				if (rule->action==0) {
-					printk(KERN_INFO "DROPPING PACKET OUT!");
-					return NF_DROP;
-				} else {
-					printk(KERN_INFO "ACCEPTING PACKET OUT!");
-					return NF_ACCEPT;
-				}
-			}
-		}
 	}
-
 
         printk(KERN_INFO "Returning drop.");
 	return NF_DROP; // If packets weren't accept so far, that means we can drop it.*/
@@ -315,10 +296,10 @@ void add_rule(struct mf_rule_desp * rule_desp_struct){
 	rule->in_out = rule_desp_struct->in_out;
 	rule->src_ip = ip_str_to_hl(rule_desp_struct->src_ip);
 	rule->src_netmask = ip_str_to_hl(rule_desp_struct->src_netmask);
-	rule->source_port = port_str_to_int(rule_desp_struct->source_port);
+	rule->src_port = port_str_to_int(rule_desp_struct->src_port);
 	rule->dest_ip = ip_str_to_hl(rule_desp_struct->dest_ip);
 	rule->dest_netmask = ip_str_to_hl(rule_desp_struct->dest_netmask);
-	rule->destination_port = port_str_to_int(rule_desp_struct->destination_port);
+	rule->dest_port = port_str_to_int(rule_desp_struct->dest_port);
 	rule->proto = rule_desp_struct->proto;
 	rule->action = rule_desp_struct->action;
 	printk(KERN_INFO "Finished adding.\n");
@@ -329,102 +310,37 @@ void add_rule(struct mf_rule_desp * rule_desp_struct){
 
 // Function to drop all the packets
 void drop_all_packets(void){
-	struct mf_rule_desp rule_allow_tcp_ssh_incoming, rule_allow_tcp_ssh_outgoing;
-	struct mf_rule_desp rule_allow_http_incoming, rule_allow_http_outgoing;
-	struct mf_rule_desp rule_allow_https_incoming, rule_allow_https_outgoing;
-	
+	struct mf_rule_desp rule_block_all_incoming;
+	struct mf_rule_desp rule_block_all_outgoing;
+
 	printk(KERN_INFO "\n\nSetting the rules.\n\n");
-	printk(KERN_INFO "Allowing SSH INPUT.\n");
-	rule_allow_tcp_ssh_incoming.in_out = 1; // 0 = neither in or out, 1 = in, 2 = out
-	rule_allow_tcp_ssh_incoming.src_ip = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_allow_tcp_ssh_incoming.src_ip, "10.0.2.15"); // TODO: CHANGE THE IP
-	rule_allow_tcp_ssh_incoming.src_netmask = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_allow_tcp_ssh_incoming.src_netmask, "255.255.255.255");
-	rule_allow_tcp_ssh_incoming.source_port = NULL;
-	rule_allow_tcp_ssh_incoming.dest_ip = NULL;
-	rule_allow_tcp_ssh_incoming.dest_netmask = NULL;
-	rule_allow_tcp_ssh_incoming.destination_port = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_allow_tcp_ssh_incoming.destination_port, "22");
-	rule_allow_tcp_ssh_incoming.proto = 1;  // TCP
-	rule_allow_tcp_ssh_incoming.action = 1; // BLOCK ACTION (DROP)
-	add_rule(&rule_allow_tcp_ssh_incoming);
+	printk(KERN_INFO "Blocking incoming connections for all protocols.\n");
+	rule_block_all_incoming.in_out = 1; // 0 = neither in or out, 1 = in, 2 = out
+	rule_block_all_incoming.src_ip = (char *)kmalloc(16, GFP_KERNEL);
+	strcpy(rule_block_all_incoming.src_ip, "10.0.2.15"); // TODO: CHANGE THE IP
+	rule_block_all_incoming.src_netmask = (char *)kmalloc(16, GFP_KERNEL);
+	strcpy(rule_block_all_incoming.src_netmask, "255.255.255.255");
+	rule_block_all_incoming.src_port = NULL;
+	rule_block_all_incoming.dest_ip = NULL;
+	rule_block_all_incoming.dest_netmask = NULL;
+	rule_block_all_incoming.dest_port = NULL;
+	rule_block_all_incoming.proto = 1;  // ALL PROTOCOLS
+	rule_block_all_incoming.action = 1; // BLOCK ACTION (DROP)
+	add_rule(&rule_block_all_incoming);
 
-	printk(KERN_INFO "Allowing SSH OUTPUT\n");
-	rule_allow_tcp_ssh_outgoing.in_out = 2; // 0 = neither in or out, 1 = in, 2 = out
-	rule_allow_tcp_ssh_outgoing.src_ip = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_allow_tcp_ssh_outgoing.src_ip, "10.0.2.15"); // TODO: CHANGE THE IP
-	rule_allow_tcp_ssh_outgoing.src_netmask = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_allow_tcp_ssh_outgoing.src_netmask, "255.255.255.255");
-	rule_allow_tcp_ssh_outgoing.source_port = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_allow_tcp_ssh_outgoing.source_port, "22");
-	rule_allow_tcp_ssh_outgoing.dest_ip = NULL;
-	rule_allow_tcp_ssh_outgoing.dest_netmask = NULL;
-	rule_allow_tcp_ssh_outgoing.destination_port = NULL;
-	rule_allow_tcp_ssh_outgoing.proto = 1;  // 0 all, 1 tcp, 2 udp
-	rule_allow_tcp_ssh_outgoing.action = 1; // 0 for block, 1 for unblock
-	add_rule(&rule_allow_tcp_ssh_outgoing);
-	
-	printk(KERN_INFO "Allowing HTTP INPUT\n");
-	rule_allow_http_incoming.in_out = 1;
-	rule_allow_http_incoming.src_ip = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_allow_http_incoming.src_ip, "10.0.2.15");
-	rule_allow_http_incoming.src_netmask = (char *)kmalloc(16,GFP_KERNEL);
-	strcpy(rule_allow_http_incoming.src_netmask, "255.255.255.255");
-	rule_allow_http_incoming.source_port = NULL;
-	rule_allow_http_incoming.dest_ip = NULL;
-	rule_allow_http_incoming.dest_netmask = NULL;
-	rule_allow_http_incoming.destination_port = (char *)kmalloc(16,GFP_KERNEL);
-	strcpy(rule_allow_http_incoming.destination_port, "80");
-	rule_allow_http_incoming.proto = 1;
-	rule_allow_http_incoming.action = 1;
-	add_rule(&rule_allow_http_incoming);
-
-	printk(KERN_INFO "Allowing HTTP OUTPUT\n");
-	rule_allow_http_outgoing.in_out = 1;
-	rule_allow_http_outgoing.src_ip = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_allow_http_outgoing.src_ip, "10.0.2.15");
-	rule_allow_http_outgoing.src_netmask = (char *)kmalloc(16,GFP_KERNEL);
-	strcpy(rule_allow_http_outgoing.src_netmask, "255.255.255.255");
-	rule_allow_http_outgoing.source_port = (char *)kmalloc(16,GFP_KERNEL);
-	strcpy(rule_allow_http_outgoing.source_port, "80");
-	rule_allow_http_outgoing.dest_ip = NULL;
-	rule_allow_http_outgoing.dest_netmask = NULL;
-	rule_allow_http_outgoing.destination_port = NULL;
-	rule_allow_http_outgoing.proto = 1;
-	rule_allow_http_outgoing.action = 1;
-	add_rule(&rule_allow_http_outgoing);
-	
-
-	printk(KERN_INFO "Allowing HTTPS INPUT\n");
-	rule_allow_https_incoming.in_out = 1;
-	rule_allow_https_incoming.src_ip = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_allow_https_incoming.src_ip, "10.0.2.15");
-	rule_allow_https_incoming.src_netmask = (char *)kmalloc(16,GFP_KERNEL);
-	strcpy(rule_allow_https_incoming.src_netmask, "255.255.255.255");
-	rule_allow_https_incoming.source_port = NULL;
-	rule_allow_https_incoming.dest_ip = NULL;
-	rule_allow_https_incoming.dest_netmask = NULL;
-        rule_allow_https_incoming.destination_port = (char *)kmalloc(16,GFP_KERNEL);
-	strcpy(rule_allow_https_incoming.destination_port, "443");
-	rule_allow_https_incoming.proto = 1;
-	rule_allow_https_incoming.action = 1;
-	add_rule(&rule_allow_https_incoming);
-
-	printk(KERN_INFO "Allowing HTTPS OUTPUT\n");
-	rule_allow_https_outgoing.in_out = 1;
-	rule_allow_https_outgoing.src_ip = (char *)kmalloc(16, GFP_KERNEL);
-	strcpy(rule_allow_https_outgoing.src_ip, "10.0.2.15");
-	rule_allow_https_outgoing.src_netmask = (char *)kmalloc(16,GFP_KERNEL);
-	strcpy(rule_allow_https_outgoing.src_netmask, "255.255.255.255");
-	rule_allow_https_outgoing.source_port = (char *)kmalloc(16,GFP_KERNEL);
-	strcpy(rule_allow_https_outgoing.source_port, "443");
-	rule_allow_https_outgoing.dest_ip = NULL;
-	rule_allow_https_outgoing.dest_netmask = NULL;
-	rule_allow_https_outgoing.destination_port = NULL;
-	rule_allow_https_outgoing.proto = 1;
-	rule_allow_https_outgoing.action = 1;
-	add_rule(&rule_allow_https_outgoing);
-	
+	printk(KERN_INFO "Blocking outgoing connections for all protocols.\n");
+	rule_block_all_outgoing.in_out = 2; // 0 = neither in or out, 1 = in, 2 = out
+	rule_block_all_outgoing.src_ip = (char *)kmalloc(16, GFP_KERNEL);
+	strcpy(rule_block_all_outgoing.src_ip, "10.0.2.15"); // TODO: CHANGE THE IP
+	rule_block_all_outgoing.src_netmask = (char *)kmalloc(16, GFP_KERNEL);
+	strcpy(rule_block_all_outgoing.src_netmask, "255.255.255.255");
+	rule_block_all_outgoing.src_port = NULL;
+	rule_block_all_outgoing.dest_ip = NULL;
+	rule_block_all_outgoing.dest_netmask = NULL;
+	rule_block_all_outgoing.dest_port = NULL;
+	rule_block_all_outgoing.proto = 1;  // 0 all, 1 tcp, 2 udp
+	rule_block_all_outgoing.action = 1; // 0 for block, 1 for unblock
+	add_rule(&rule_block_all_outgoing);
 }
 
 //Called when module loaded using 'insmod'
