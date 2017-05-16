@@ -171,6 +171,13 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
         }else{
 		return NF_STOLEN;
 	}
+
+	/*printk(KERN_INFO "OUT / DEST IP: %u Ip_str: %u", destination_ip, ip_str_to_hl("223.202.132.112"));
+	if(destination_ip == 2551672010 || source_ip == 2551672010){
+		printk(KERN_INFO "Test Blocked BLOCKED!");
+		return NF_STOLEN;
+	}*/
+	// bing = 847278282
 	//for(lh = &policy_list.list; lh != &(policy_list.list); lh = lh->next){
 	list_for_each(lh,&policy_list.list){
 		i++;
@@ -259,7 +266,13 @@ unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_
 	}else{
 		return NF_STOLEN;
 	}
-
+	/*
+	printk(KERN_INFO "IN / DEST IP: %u Ip_str: %u", destination_ip, ip_str_to_hl("223.202.132.112"));
+	if(destination_ip == 2551672010 || source_ip == 2551672010){
+		printk(KERN_INFO "Test BLOCKED!");
+		return NF_STOLEN;
+	}*/
+	//chinesetest.cn = 223.202.132.112
 	//for(lh = &policy_list.list; lh != &(policy_list.list); lh = lh->next){
 	list_for_each(lh,&policy_list.list){
 		printk(KERN_INFO "List For Each / IN");
@@ -518,15 +531,15 @@ int init_module()
 	INIT_LIST_HEAD(&(policy_list.list));
 	drop_all_packets();	
 	nfho_in.hook = hook_func_in;		//function to call when conditions below met
-	//nfho_in.hooknum = NF_INET_PRE_ROUTING;	
-	nfho_in.hooknum = NF_INET_LOCAL_IN;	//called right after packet recieved, first hook in Netfilter
+	nfho_in.hooknum = NF_INET_PRE_ROUTING;	
+	//nfho_in.hooknum = NF_INET_LOCAL_IN;	//called right after packet recieved, first hook in Netfilter
 	nfho_in.pf = PF_INET;			//IPV4 packets
 	nfho_in.priority = NF_IP_PRI_FIRST;	//set to highest priority over all other hook functions
 	nf_register_hook(&nfho_in);		// Register the hook
 	
 	nfho_out.hook = hook_func_out;
-	//nfho_out.hooknum = NF_INET_POST_ROUTING;
-	nfho_out.hooknum = NF_INET_LOCAL_OUT;
+	nfho_out.hooknum = NF_INET_POST_ROUTING;
+	//nfho_out.hooknum = NF_INET_LOCAL_OUT;
 	nfho_out.pf = PF_INET;
 	nfho_out.priority = NF_IP_PRI_FIRST;
 	nf_register_hook(&nfho_out);
