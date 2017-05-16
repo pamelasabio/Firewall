@@ -6,7 +6,6 @@ echo Setting SSH INPUT..
 #Allow established input SSH connection
 iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
 
-
 echo Setting SSH OUTPUT..
 #Allow NEW,ESTABLISHED output SSH connection
 iptables -A OUTPUT -p tcp --sport 22 -m conntrack --ctstate ESTABLISHED -j ACCEPT
@@ -39,7 +38,26 @@ echo Setting SMTP OUTPUT..
 #Allow SMTP connection OUTPUT
 iptables -A OUTPUT -p tcp --sport 25 -m conntrack --ctstate ESTABLISHED -j ACCEPT
 
+echo Setting Forwarding..
+#setting IP Forwarding for internal network
+iptables -A FORWARD -i eth1 -j ACCEPT
+iptables -A FORWARD -o eth1 -j ACCEPT
+
+#enabling forwarding on this machine
+echo Enabling Forwarding on this machine..
+sysctl net.ipv4.ip_forward=1
+
+#
+echo Setting Masquerade ..
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+echo Setting PREROUTING details..
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j DNAT --to-destination 192.168.12.77:80
+
 echo Done
 echo 
 echo New Rules:
 iptables -L
+
+#Flushing the rules for testing purposes
+iptables -F
