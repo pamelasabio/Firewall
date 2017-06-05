@@ -23,7 +23,7 @@
 
 MODULE_LICENSE("GPL");				// Set the license
 MODULE_AUTHOR("Eryk Szlachetka, Pamela Sabio"); // Set the Authors
-MODULE_DESCRIPTION("Desc goes here");		// Set the description
+MODULE_DESCRIPTION("Kernel module to replace functionality of IPTables, allow the user to access TCP/UDP protocols with specific ports only.");		// Set the description
 
 void drop_all_packets(void);
 unsigned int port_str_to_int(char *port_str);
@@ -57,16 +57,11 @@ struct mf_rule {
 static struct mf_rule policy_list;
 static struct nf_hook_ops nfho_in;
 static struct nf_hook_ops nfho_out;
-//static struct nf_hook_ops nfho_in, nfho_out;   // Struct holding set of hook function options
-//static unsigned char *ip = "\xC0\xA8\x00\x01"; // Ip in network byte order (192.168.0.1);
-//static char *interface = "lo";                 // Loop-back interface which will be blocked
 unsigned char *telnet_port = "x00\x17";	       // The telnet port
 struct udphdr *udp_header, *udp_header_out;
 struct sk_buff *sk_buffer_in, *sk_buffer_out;
 struct iphdr *ip_header, *ip_header_out;
 struct tcphdr *tcp_header, *tcp_header_out;
-//struct httphdr *http_header_in, *http_header_out;
-//struct smpthdr *smtp_header_in, *smtp_header_out;
 
 
 unsigned int port_str_to_int(char *port_str) {
@@ -138,15 +133,9 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 	unsigned int source_ip;
 	unsigned int destination_port, source_port = 0;
 	int i = 0;
-	//return NF_ACCEPT;
-	/*if(strcmp(state->in->name, interface) == 0){
-		return NF_DROP;
-	}*/
 
-	//if(!(skb)) { return NF_DROP; } // Validate socket_buff
         ip_header_out = (struct iphdr *)skb_network_header(skb); // Assign$
-        //if(!(ip_header_out)){return NF_DROP;} // Validate IP Packet
-        //if(ip_header_out->saddr == *(unsigned int *)ip){return NF_DROP;} // Compare$
+ 
 	// Initialize ips
 	destination_ip = (unsigned int) ip_header_out -> daddr;
 	source_ip = (unsigned int) ip_header_out -> saddr;
@@ -159,8 +148,6 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
                 udp_header_out = (struct udphdr *)(skb_transport_header(skb));
 		source_port = (unsigned int)ntohs(udp_header_out->source);
 		destination_port = (unsigned int)ntohs(udp_header_out ->dest);
-    		// DROP THE TELNET CONNECTIONS
-                //if((udp_header_out->dest) == *(unsigned short*)telnet_port){ return NF_DROP;}
         }else if (ip_header_out->protocol == PROTOCOL_TCP) // Check if we are dealing with TCP PACKET 
         {
                 printk(KERN_INFO "TCP Packet Out\n");
@@ -178,7 +165,7 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 		return NF_STOLEN;
 	}*/
 	// bing = 847278282
-	//for(lh = &policy_list.list; lh != &(policy_list.list); lh = lh->next){
+
 	list_for_each(lh,&policy_list.list){
 		i++;
 		rule = list_entry(lh, struct mf_rule, list);
@@ -194,13 +181,6 @@ unsigned int hook_func_out(void *priv, struct sk_buff *skb, const struct nf_hook
 			}
 			printk(KERN_INFO "After TCP/UDPs Dest_Rule: %u Dest: %u / OUT", ((unsigned int)rule->destination_port), ((unsigned int)destination_port));
 
-
-			//|| (source_port !=  ((unsigned int)rule->source_port))
-			/*if ((destination_port != ((unsigned int)rule->destination_port))) {
-				printk(KERN_INFO "Comparing ports / OUT");
-				continue;
-
-			}*/
 			if( (destination_port == ((unsigned int)rule->destination_port)) || (source_port == ((unsigned int)rule->destination_port)) ){
 				printk(KERN_INFO "After comparing the ports / OUT");
 
@@ -233,16 +213,8 @@ unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_
 	unsigned int destination_ip;
 	unsigned int source_port, destination_port = 0;
 	int i = 0;
-	//return NF_ACCEPT;
-	// Check if we are dealing with loop-back interface is so then drop it.
-  	/*if(strcmp(state->in->name,interface) == 0){
-		return NF_DROP;
-  	}*/
 
-	//if(!(skb)) { return NF_DROP; } // Validate socket_buff
 	ip_header= (struct iphdr *)skb_network_header(skb); // Assign the ip_header
-	//if(!(ip_header)){return NF_DROP;} // Validate IP Packet
-	//if(ip_header->saddr == *(unsigned int *)ip){return NF_DROP;} // Compare IP  */
 
 	//Initialize variables
 	source_ip = (unsigned int)ip_header->saddr;
@@ -251,8 +223,6 @@ unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_
 	if (ip_header->protocol == PROTOCOL_UDP){
 		printk(KERN_INFO "UDP Packet\n");
 		udp_header = (struct udphdr *)(skb_transport_header(skb)); // Assign header
-		// Drop - if telnet
-		//if((udp_header->dest) == *(unsigned short*)telnet_port){ return NF_DROP;}
 		// Assign ports
 		source_port = (unsigned int)ntohs(udp_header->source);
 		destination_port = (unsigned int)ntohs(udp_header->dest);
@@ -273,7 +243,7 @@ unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_
 		return NF_STOLEN;
 	}*/
 	//chinesetest.cn = 223.202.132.112
-	//for(lh = &policy_list.list; lh != &(policy_list.list); lh = lh->next){
+
 	list_for_each(lh,&policy_list.list){
 		printk(KERN_INFO "List For Each / IN");
 		i++;
@@ -290,21 +260,7 @@ unsigned int hook_func_in(void *priv, struct sk_buff *skb, const struct nf_hook_
 			}
 
 			printk(KERN_INFO "After TCP/UDPs Dest_Rule: %u Source: %u Dest: %u/ IN", ((unsigned int)rule->destination_port), ((unsigned int)source_port), ((unsigned int)destination_port));
-			//check the port number
-			/*if(((unsigned int)ntohs(rule->source_port)) == 0){
-				//rule doesn't specify src port: match
-			}else if (source_port != ((unsigned int)ntohs(rule->source_port))) {
-				//continue;
-			}*/
-
-			/*if (((unsigned int)ntohs(rule->destination_port)) == 0) {
-				//rule doens't specify dest port: match
-			}*/
-			//|| (source_port !=  ((unsigned int)rule->source_port)
-			/*if ((destination_port != ((unsigned int)rule->destination_port))) {
-				continue;
-				
-			}*/
+		
 			
 			if( (destination_port == ((unsigned int)rule->destination_port)) || (source_port == ((unsigned int)rule->destination_port))){
 				//a match is found: take action
@@ -354,7 +310,7 @@ void add_rule(struct mf_rule_desp * rule_desp_struct, int n){
 }
 
 // Function to drop all the packets
-void drop_all_packets(void){
+void set_all_packets(void){
 	struct mf_rule_desp rule_allow_tcp_ssh_incoming, rule_allow_tcp_ssh_outgoing;
 	struct mf_rule_desp rule_allow_http_incoming, rule_allow_http_outgoing;
 	struct mf_rule_desp rule_allow_https_incoming, rule_allow_https_outgoing;
@@ -529,7 +485,7 @@ void drop_all_packets(void){
 int init_module()
 {
 	INIT_LIST_HEAD(&(policy_list.list));
-	drop_all_packets();	
+	set_all_packets();	
 	nfho_in.hook = hook_func_in;		//function to call when conditions below met
 	nfho_in.hooknum = NF_INET_PRE_ROUTING;	
 	//nfho_in.hooknum = NF_INET_LOCAL_IN;	//called right after packet recieved, first hook in Netfilter
