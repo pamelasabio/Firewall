@@ -1,10 +1,24 @@
+<<<<<<< HEAD
+=======
+# Prerequisites
+*.d
+
+>>>>>>> origin/master
 # Object files
 *.o
 *.ko
 *.obj
 *.elf
+<<<<<<< HEAD
 *.cmd
 *.tmp*
+=======
+
+# Linker output
+*.ilk
+*.map
+*.exp
+>>>>>>> origin/master
 
 # Precompiled Headers
 *.gch
@@ -33,3 +47,17 @@
 # Debug files
 *.dSYM/
 *.su
+<<<<<<< HEAD
+=======
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+>>>>>>> origin/master
